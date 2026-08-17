@@ -2,7 +2,7 @@
 
 > An OCI infrastructure personality engine. Three numeric inputs decide whether Terraform provisions a single public VM, a hardened private instance accessible only via OCI Bastion, or a load-balanced Compute pair — with zero code changes required.
 
-![Terraform + OCI Infrastructure Overview](docs/images/ChatGPT%20Image%20Aug%2016,%202026,%2002_48_34%20PM.png)
+![Terraform + OCI Infrastructure Overview](docs/images/oci-infrastructure-overview.png)
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-623CE4?logo=terraform)](https://www.terraform.io/)
 [![OCI Provider](https://img.shields.io/badge/OCI%20Provider-~%3E6.0-F80000?logo=oracle)](https://registry.terraform.io/providers/oracle/oci/latest)
