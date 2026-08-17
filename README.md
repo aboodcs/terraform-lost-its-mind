@@ -38,7 +38,7 @@ This repository demonstrates advanced Terraform conditional logic and Oracle Clo
 
 ## How It Works
 
-![How It Works](docs/images/how-it-works.svg)
+![How It Works](docs/images/how-it-works.png)
 
 1. **User Inputs**: Variables are passed via `terraform.tfvars`.
 2. **Validation**: `variables.tf` enforces type constraints and acceptable ranges.
@@ -50,7 +50,7 @@ This repository demonstrates advanced Terraform conditional logic and Oracle Clo
 
 ## Personality Engine
 
-![Personality Engine](docs/images/personality-engine.svg)
+![Personality Engine](docs/images/personality-engine.png)
 
 Personalities are selected using a chained ternary expression in `locals.tf`. **Condition precedence is strictly top-to-bottom — the first matching condition wins.**
 
@@ -89,7 +89,7 @@ Infrastructure components are controlled by derived boolean flags:
 
 ## Architecture Overview
 
-![Architecture Overview](docs/images/architecture-overview.svg)
+![Architecture Overview](docs/images/architecture-overview.png)
 
 ### Base Infrastructure (Always Provisioned)
 * **OCI VCN**: `10.0.0.0/16` (`main_vcn`)
@@ -114,7 +114,7 @@ Infrastructure components are controlled by derived boolean flags:
 
 ## Architecture Modes
 
-![Architecture Modes](docs/images/architecture-modes.svg)
+![Architecture Modes](docs/images/architecture-modes.png)
 
 ### 1. Standard Public Mode (Normal / Broke / Chaotic)
 * **Compute**: 1 × OCI Compute instance in Public Subnet (`10.0.1.0/24`)
@@ -139,7 +139,7 @@ Infrastructure components are controlled by derived boolean flags:
 
 ## Request Flow
 
-![Request Flow](docs/images/request-flow.svg)
+![Request Flow](docs/images/request-flow.png)
 
 * **Standard Mode**: `Browser ──► Internet Gateway ──► Public Instance (port 80)`
 * **Billionaire Mode**: `Browser ──► OCI Load Balancer ──► Round-Robin Backend Set ──► Instances (port 80)`
