@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="1000" height="580" font-family="'Segoe UI',Arial,sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <marker id="b1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#58a6ff"/>
+    </marker>
+    <marker id="b2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#a371f7"/>
+    </marker>
+    <marker id="b3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e87b00"/>
+    </marker>
+    <marker id="b4" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#3fb950"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="580" fill="url(#bg3)" rx="12"/>
+  <text x="500" y="34" text-anchor="middle" fill="#f0f6fc" font-size="17" font-weight="bold" letter-spacing="2">ARCHITECTURE MODES — Side by Side</text>
+  <text x="500" y="52" text-anchor="middle" fill="#8b949e" font-size="11">Infrastructure layout for each personality mode</text>
+  <line x1="60" y1="62" x2="940" y2="62" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Mode headers -->
+  <!-- Column 1: Normal/Broke/Chaotic (public, 1 instance) -->
+  <rect x="20" y="75" width="220" height="32" rx="6" fill="#0c1a2e" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="130" y="95" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="bold">NORMAL / BROKE / CHAOTIC</text>
+
+  <!-- Column 2: Paranoid (private, 1 instance, bastion) -->
+  <rect x="390" y="75" width="220" height="32" rx="6" fill="#1a0a2e" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="500" y="95" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="bold">PARANOID ENGINEER</text>
+
+  <!-- Column 3: Billionaire (public, 2 instances, LB) -->
+  <rect x="760" y="75" width="220" height="32" rx="6" fill="#10071a" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="870" y="95" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="bold">CLOUD BILLIONAIRE</text>
+
+  <!-- Dividers -->
+  <line x1="260" y1="75" x2="260" y2="570" stroke="#30363d" stroke-width="1"/>
+  <line x1="630" y1="75" x2="630" y2="570" stroke="#30363d" stroke-width="1"/>
+
+  <!-- ===== COLUMN 1: NORMAL/BROKE/CHAOTIC ===== -->
+  <!-- Internet -->
+  <rect x="80" y="125" width="100" height="40" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="130" y="140" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="bold">INTERNET</text>
+  <text x="130" y="157" text-anchor="middle" fill="#58a6ff" font-size="14">🌐</text>
+
+  <line x1="130" y1="165" x2="130" y2="190" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#b1)"/>
+  <text x="140" y="182" fill="#58a6ff" font-size="8">HTTP:80 / SSH:22</text>
+
+  <!-- IGW -->
+  <rect x="75" y="195" width="110" height="35" rx="6" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="130" y="215" text-anchor="middle" fill="#58a6ff" font-size="9" font-weight="bold">Internet Gateway</text>
+
+  <line x1="130" y1="230" x2="130" y2="260" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#b1)"/>
+
+  <!-- Public Subnet label -->
+  <rect x="55" y="265" width="150" height="20" rx="4" fill="#0a1f0a" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,1"/>
+  <text x="130" y="279" text-anchor="middle" fill="#3fb950" font-size="8">PUBLIC SUBNET 10.0.1.0/24</text>
+
+  <line x1="130" y1="285" x2="130" y2="310" stroke="#3fb950" stroke-width="1.5" marker-end="url(#b4)"/>
+
+  <!-- NSG main -->
+  <rect x="55" y="315" width="150" height="30" rx="5" fill="#161b22" stroke="#3fb950" stroke-width="1"/>
+  <text x="130" y="330" text-anchor="middle" fill="#3fb950" font-size="8" font-weight="bold">NSG main</text>
+  <text x="130" y="342" text-anchor="middle" fill="#484f58" font-size="7">SSH(cidr) + HTTP/80(0.0.0.0/0)</text>
+
+  <line x1="130" y1="345" x2="130" y2="375" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#b1)"/>
+
+  <!-- Compute (public) -->
+  <rect x="55" y="380" width="150" height="90" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="130" y="398" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="bold">COMPUTE ×1</text>
+  <text x="130" y="415" text-anchor="middle" fill="#f0f6fc" font-size="18">🖥</text>
+  <text x="130" y="432" text-anchor="middle" fill="#58a6ff" font-size="8">E4.Flex  2OCPU 16GB</text>
+  <text x="130" y="445" text-anchor="middle" fill="#3fb950" font-size="8">PUBLIC IP assigned</text>
+  <text x="130" y="458" text-anchor="middle" fill="#484f58" font-size="8">nginx :80  Oracle Linux 9</text>
+
+  <!-- Trigger conditions col 1 -->
+  <rect x="30" y="488" width="200" height="72" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="130" y="504" text-anchor="middle" fill="#8b949e" font-size="8" font-weight="bold">Triggers</text>
+  <text x="130" y="518" text-anchor="middle" fill="#f78166" font-size="8">BROKE: budget &lt; 20</text>
+  <text x="130" y="531" text-anchor="middle" fill="#58a6ff" font-size="8">NORMAL: default fallthrough</text>
+  <text x="130" y="544" text-anchor="middle" fill="#3fb950" font-size="8">CHAOTIC: chaos_level ≥ 80</text>
+  <text x="130" y="557" text-anchor="middle" fill="#484f58" font-size="8">(after budget ≥ 20 and sec &lt; 80 and budget &lt; 500)</text>
+
+  <!-- ===== COLUMN 2: PARANOID ===== -->
+  <!-- Internet -->
+  <rect x="447" y="125" width="106" height="40" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="500" y="140" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="bold">INTERNET</text>
+  <text x="500" y="157" text-anchor="middle" fill="#58a6ff" font-size="14">🌐</text>
+
+  <!-- OCI Bastion (entry point) -->
+  <line x1="500" y1="165" x2="500" y2="190" stroke="#e87b00" stroke-width="1.5" marker-end="url(#b3)"/>
+  <text x="514" y="182" fill="#e87b00" font-size="8">SSH only</text>
+
+  <rect x="435" y="195" width="130" height="40" rx="6" fill="#1a0800" stroke="#e87b00" stroke-width="1.5"/>
+  <text x="500" y="213" text-anchor="middle" fill="#e87b00" font-size="9" font-weight="bold">OCI BASTION</text>
+  <text x="500" y="228" text-anchor="middle" fill="#484f58" font-size="7">Client CIDR: allowed_ssh_cidr</text>
+
+  <!-- IGW (also present but irrelevant for app) -->
+  <rect x="330" y="240" width="90" height="30" rx="5" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="375" y="260" text-anchor="middle" fill="#484f58" font-size="8">IGW (present)</text>
+
+  <!-- NAT GW -->
+  <rect x="585" y="240" width="100" height="30" rx="5" fill="#1a0a2e" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="635" y="260" text-anchor="middle" fill="#a371f7" font-size="8">NAT Gateway</text>
+
+  <!-- Private Subnet -->
+  <rect x="390" y="285" width="220" height="20" rx="4" fill="#1a0a2e" stroke="#a371f7" stroke-width="1" stroke-dasharray="3,1"/>
+  <text x="500" y="299" text-anchor="middle" fill="#a371f7" font-size="8">PRIVATE SUBNET 10.0.2.0/24</text>
+
+  <line x1="500" y1="235" x2="500" y2="283" stroke="#e87b00" stroke-width="1.5" marker-end="url(#b3)"/>
+
+  <!-- NSG private_app -->
+  <rect x="390" y="310" width="220" height="30" rx="5" fill="#161b22" stroke="#a371f7" stroke-width="1"/>
+  <text x="500" y="325" text-anchor="middle" fill="#a371f7" font-size="8" font-weight="bold">NSG private_app</text>
+  <text x="500" y="338" text-anchor="middle" fill="#484f58" font-size="7">SSH + HTTP/80 from Bastion IP/32 only</text>
+
+  <line x1="500" y1="340" x2="500" y2="370" stroke="#a371f7" stroke-width="1.5" marker-end="url(#b2)"/>
+
+  <!-- Private compute -->
+  <rect x="420" y="375" width="160" height="90" rx="8" fill="#161b22" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="500" y="393" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="bold">COMPUTE ×1</text>
+  <text x="500" y="410" text-anchor="middle" fill="#f0f6fc" font-size="18">🖥</text>
+  <text x="500" y="427" text-anchor="middle" fill="#58a6ff" font-size="8">E4.Flex  2OCPU 16GB</text>
+  <text x="500" y="440" text-anchor="middle" fill="#e87b00" font-size="8">NO PUBLIC IP</text>
+  <text x="500" y="453" text-anchor="middle" fill="#484f58" font-size="8">nginx :80  Oracle Linux 9</text>
+
+  <!-- NAT outbound arrow -->
+  <line x1="580" y1="415" x2="635" y2="268" stroke="#a371f7" stroke-width="0.8" stroke-dasharray="3,3" marker-end="url(#b2)"/>
+  <text x="622" y="350" fill="#a371f7" font-size="7">Outbound</text>
+
+  <!-- Trigger conditions col 2 -->
+  <rect x="397" y="488" width="206" height="62" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="500" y="504" text-anchor="middle" fill="#8b949e" font-size="8" font-weight="bold">Trigger</text>
+  <text x="500" y="519" text-anchor="middle" fill="#a371f7" font-size="8">security_level ≥ 80</text>
+  <text x="500" y="534" text-anchor="middle" fill="#484f58" font-size="8">(checked after budget ≥ 20)</text>
+  <text x="500" y="549" text-anchor="middle" fill="#484f58" font-size="8">SSH access: Bastion port-forward tunnel</text>
+
+  <!-- ===== COLUMN 3: BILLIONAIRE ===== -->
+  <!-- Internet -->
+  <rect x="820" y="125" width="100" height="40" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="870" y="140" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="bold">INTERNET</text>
+  <text x="870" y="157" text-anchor="middle" fill="#58a6ff" font-size="14">🌐</text>
+
+  <line x1="870" y1="165" x2="870" y2="190" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#b1)"/>
+  <text x="882" y="182" fill="#58a6ff" font-size="8">HTTP:80</text>
+
+  <!-- IGW -->
+  <rect x="815" y="195" width="110" height="30" rx="6" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="870" y="215" text-anchor="middle" fill="#58a6ff" font-size="9" font-weight="bold">Internet Gateway</text>
+
+  <line x1="870" y1="225" x2="870" y2="250" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#b1)"/>
+
+  <!-- Public subnet + NSG public_entry -->
+  <rect x="675" y="255" width="390" height="20" rx="4" fill="#0a1f0a" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,1"/>
+  <text x="870" y="269" text-anchor="middle" fill="#3fb950" font-size="8">PUBLIC SUBNET 10.0.1.0/24</text>
+
+  <!-- Load Balancer -->
+  <rect x="810" y="280" width="120" height="55" rx="7" fill="#10071a" stroke="#a371f7" stroke-width="1.5"/>
+  <text x="870" y="298" text-anchor="middle" fill="#a371f7" font-size="9" font-weight="bold">LOAD BALANCER</text>
+  <text x="870" y="312" text-anchor="middle" fill="#a371f7" font-size="14">⚖</text>
+  <text x="870" y="328" text-anchor="middle" fill="#484f58" font-size="7">NSG: public_entry  HTTP/80</text>
+
+  <!-- Arrow from LB to backend set -->
+  <line x1="830" y1="335" x2="790" y2="360" stroke="#a371f7" stroke-width="1.5" marker-end="url(#b2)"/>
+  <line x1="910" y1="335" x2="940" y2="360" stroke="#a371f7" stroke-width="1.5" marker-end="url(#b2)"/>
+  <text x="870" y="355" text-anchor="middle" fill="#a371f7" font-size="8">Round-robin</text>
+
+  <!-- NSG main (billionaire: HTTP only from LB NSG) -->
+  <rect x="700" y="280" width="100" height="45" rx="5" fill="#161b22" stroke="#3fb950" stroke-width="1"/>
+  <text x="750" y="298" text-anchor="middle" fill="#3fb950" font-size="8" font-weight="bold">NSG main</text>
+  <text x="750" y="310" text-anchor="middle" fill="#484f58" font-size="7">HTTP/80 from</text>
+  <text x="750" y="322" text-anchor="middle" fill="#484f58" font-size="7">public_entry NSG only</text>
+
+  <!-- Instance 1 -->
+  <rect x="680" y="365" width="130" height="85" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="745" y="382" text-anchor="middle" fill="#8b949e" font-size="8" font-weight="bold">INSTANCE-1</text>
+  <text x="745" y="398" text-anchor="middle" fill="#f0f6fc" font-size="16">🖥</text>
+  <text x="745" y="414" text-anchor="middle" fill="#58a6ff" font-size="7">E4.Flex 2OCPU 16GB</text>
+  <text x="745" y="425" text-anchor="middle" fill="#3fb950" font-size="7">PUBLIC IP</text>
+  <text x="745" y="438" text-anchor="middle" fill="#484f58" font-size="7">nginx :80</text>
+  <text x="745" y="449" text-anchor="middle" fill="#484f58" font-size="7">weight=1</text>
+
+  <!-- Instance 2 -->
+  <rect x="930" y="365" width="50" height="85" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+  <text x="955" y="382" text-anchor="middle" fill="#8b949e" font-size="7" font-weight="bold">INST-2</text>
+  <text x="955" y="398" text-anchor="middle" fill="#f0f6fc" font-size="14">🖥</text>
+  <text x="955" y="415" text-anchor="middle" fill="#3fb950" font-size="7">PUB IP</text>
+  <text x="955" y="428" text-anchor="middle" fill="#484f58" font-size="7">nginx</text>
+  <text x="955" y="442" text-anchor="middle" fill="#484f58" font-size="7">:80</text>
+  <text x="955" y="449" text-anchor="middle" fill="#484f58" font-size="7">w=1</text>
+
+  <!-- Health check note -->
+  <rect x="660" y="465" width="330" height="40" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="825" y="481" text-anchor="middle" fill="#484f58" font-size="8" font-weight="bold">Backend Set Health Check</text>
+  <text x="825" y="498" text-anchor="middle" fill="#484f58" font-size="8">HTTP GET / → 200 OK  |  interval: 10s  |  timeout: 3s  |  retries: 3</text>
+
+  <!-- Trigger conditions col 3 -->
+  <rect x="660" y="520" width="330" height="42" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="825" y="538" text-anchor="middle" fill="#8b949e" font-size="8" font-weight="bold">Trigger</text>
+  <text x="825" y="553" text-anchor="middle" fill="#a371f7" font-size="8">budget ≥ 500  AND  security_level &lt; 80  AND  budget ≥ 20</text>
+</svg>
