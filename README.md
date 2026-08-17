@@ -1,38 +1,38 @@
 # Terraform Lost Its Mind
 
-> An OCI infrastructure personality engine. Three integers decide whether you get a single public VM, a hardened private instance behind a Bastion, or a fully load-balanced pair — no code changes required.
+> An OCI infrastructure personality engine. Three numeric inputs decide whether Terraform provisions a single public VM, a hardened private instance accessible only via OCI Bastion, or a load-balanced Compute pair — with zero code changes required.
 
-![Architecture Overview](docs/images/architecture-overview.svg)
+![Terraform + OCI Infrastructure Overview](docs/images/ChatGPT%20Image%20Aug%2016,%202026,%2002_48_34%20PM.png)
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-623CE4?logo=terraform)](https://www.terraform.io/)
 [![OCI Provider](https://img.shields.io/badge/OCI%20Provider-~%3E6.0-F80000?logo=oracle)](https://registry.terraform.io/providers/oracle/oci/latest)
-[![Oracle Cloud](https://img.shields.io/badge/Oracle%20Cloud-eu--amsterdam--1-F80000?logo=oracle)](https://www.oracle.com/cloud/)
+[![Oracle Cloud Infrastructure](https://img.shields.io/badge/Oracle%20Cloud-eu--amsterdam--1-F80000?logo=oracle)](https://www.oracle.com/cloud/)
 
 ---
 
 ## What Is This?
 
-Most Terraform projects do one thing: create a VM, or a bucket, or a cluster.
+Most Terraform configurations provision a static set of resources. This project takes a different approach: it reads three numeric variables — **budget**, **security_level**, and **chaos_level** — and uses a decision engine in `locals.tf` to select an infrastructure personality.
 
-This project does something different. It reads three numeric inputs — **budget**, **security_level**, and **chaos_level** — and from those alone selects a complete infrastructure personality. The networking topology, instance count, security groups, routing, bastion access, and load balancer configuration all change based on what you declare.
+The active personality determines the entire OCI networking and compute architecture:
+* Subnet routing (Public vs. Private)
+* Public IP allocation
+* Compute instance count (1 vs. 2)
+* Network Security Group (NSG) traffic rules
+* Conditional deployment of OCI Bastion, OCI NAT Gateway, and OCI Load Balancer
 
-The same codebase produces five distinct named personalities, each with its own architecture. You do not need to edit any Terraform file between them. You change the numbers, and the infrastructure changes with them.
-
-The deployed application is an nginx server that reports back which personality is running, what values were provided, and what the infrastructure thinks of you.
+The provisioned OCI Compute instances run an nginx web server bootstrapped via `cloud-init`. The server hosts a dynamic terminal-style web page that displays the active personality, input values, and current infrastructure status.
 
 ---
 
 ## Why I Built It
 
-Terraform's real power is not in declaring individual resources — it is in the conditional logic that wraps them. Most tutorials show `resource "aws_instance" "web" {}` and call it a day. This project was built to explore what happens when you push Terraform's expression system further:
+This repository demonstrates advanced Terraform conditional logic and Oracle Cloud Infrastructure architecture patterns:
 
-- `count` expressions driven by `locals`
-- `for_each` iterating over dynamically-sized instance lists
-- Splat expressions for collecting IPs across counted resources
-- Chained ternary logic selecting subnets, NSGs, and gateways
-- Conditional resource creation for entire resource blocks (NAT Gateway, Bastion, Load Balancer)
-- `templatefile()` for both the bootstrap script and the served HTML
-- NSG-to-NSG source rules for Load Balancer-to-backend traffic isolation
+* **Conditional resource creation** — Using `count` and ternary logic to provision resources like OCI Bastion, OCI NAT Gateway, and OCI Load Balancer only when required.
+* **Dynamic instance management** — Scaling instance count via `locals` and iterating with `for_each` for Load Balancer backends.
+* **Strict network isolation** — Centralizing all security policy in OCI Network Security Groups (NSGs) while leaving VCN Security Lists empty.
+* **Templated bootstrapping** — Passing dynamic infrastructure metadata into `cloud-init` scripts and HTML templates using Terraform `templatefile()`.
 
 ---
 
@@ -40,17 +40,23 @@ Terraform's real power is not in declaring individual resources — it is in the
 
 ![How It Works](docs/images/how-it-works.svg)
 
-![Personality Engine](docs/images/personality-engine.svg)
+1. **User Inputs**: Variables are passed via `terraform.tfvars`.
+2. **Validation**: `variables.tf` enforces type constraints and acceptable ranges.
+3. **Decision Engine**: `locals.tf` evaluates input conditions to determine the personality and architecture flags (`is_paranoid`, `is_billionaire`).
+4. **Resource Provisioning**: Terraform evaluates conditional blocks across `network.tf`, `security.tf`, `compute.tf`, and `load-balancer.tf`.
+5. **OCI Deployment**: Resources are created in Oracle Cloud Infrastructure (`eu-amsterdam-1`).
 
 ---
 
 ## Personality Engine
 
-Personalities are selected by a single chained conditional expression in `locals.tf`. **The first matching condition wins.**
+![Personality Engine](docs/images/personality-engine.svg)
+
+Personalities are selected using a chained ternary expression in `locals.tf`. **Condition precedence is strictly top-to-bottom — the first matching condition wins.**
 
 ```hcl
 personality = (
-  var.budget         < 20 ? "BROKE STUDENT"     :
+  var.budget         < 20  ? "BROKE STUDENT"     :
   var.security_level >= 80 ? "PARANOID ENGINEER" :
   var.budget         >= 500 ? "CLOUD BILLIONAIRE" :
   var.chaos_level    >= 80 ? "CHAOTIC"           :
@@ -58,22 +64,51 @@ personality = (
 )
 ```
 
-| Priority | Condition | Personality | Message |
-|----------|-----------|-------------|---------|
+### Personality Precedence Table
+
+| Priority | Condition | Personality | Personality Message |
+|:---:|---|---|---|
 | **1** | `budget < 20` | **BROKE STUDENT** | *"We are NOT paying for that."* |
 | **2** | `security_level >= 80` | **PARANOID ENGINEER** | *"I don't trust the Internet."* |
 | **3** | `budget >= 500` | **CLOUD BILLIONAIRE** | *"Availability first. Money later."* |
 | **4** | `chaos_level >= 80` | **CHAOTIC** | *"I provision therefore I am."* |
 | **5** | *(default)* | **NORMAL ENGINEER** | *"Let's build something reasonable."* |
 
-> **Critical:** `budget = 10` with `security_level = 99` resolves to **BROKE STUDENT**, not PARANOID ENGINEER. Budget is evaluated first.
+> **Important Precedence Rule:** `budget < 20` is evaluated first. If `budget = 10` and `security_level = 95`, the resulting personality is **BROKE STUDENT** because condition 1 overrides condition 2.
 
-Two derived booleans drive infrastructure layout:
+### Derived Architecture Flags
 
-| Local | Expression | Effect |
-|-------|-----------|--------|
-| `is_paranoid` | `security_level >= 80` | Private networking + Bastion |
-| `is_billionaire` | `personality == "CLOUD BILLIONAIRE"` | Load Balancer + 2 instances |
+Infrastructure components are controlled by derived boolean flags:
+
+| Local Flag | Condition | Impact on OCI Infrastructure |
+|---|---|---|
+| `is_paranoid` | `security_level >= 80` | Deploys VM in Private Subnet (`10.0.2.0/24`), disables Public IP, provisions OCI Bastion & OCI NAT Gateway. |
+| `is_billionaire` | `personality == "CLOUD BILLIONAIRE"` | Increases `instance_count` to 2 and provisions an OCI Load Balancer. |
+
+---
+
+## Architecture Overview
+
+![Architecture Overview](docs/images/architecture-overview.svg)
+
+### Base Infrastructure (Always Provisioned)
+* **OCI VCN**: `10.0.0.0/16` (`main_vcn`)
+* **OCI Internet Gateway**: Handles outbound and public internet traffic
+* **OCI Public Subnet**: `10.0.1.0/24` with route rule to Internet Gateway
+* **OCI Security List**: Empty placeholder (`nsg_only`) — all traffic rules are handled by NSGs
+* **OCI Network Security Group (`main`)**: Primary security boundary for compute instances
+
+### Conditional Infrastructure
+
+| Component | Resource Type | Active Mode / Trigger |
+|---|---|---|
+| **OCI Private Subnet** | `oci_core_subnet.private` | Paranoid Mode (`security_level >= 80`) |
+| **OCI NAT Gateway** | `oci_core_nat_gateway.paranoid` | Paranoid Mode (`security_level >= 80`) |
+| **OCI Private Route Table** | `oci_core_route_table.private` | Paranoid Mode (`security_level >= 80`) |
+| **OCI Bastion** | `oci_bastion_bastion.paranoid` | Paranoid Mode (`security_level >= 80`) |
+| **OCI Load Balancer** | `oci_load_balancer_load_balancer.main` | Cloud Billionaire Mode (`budget >= 500`) |
+| **OCI LB Backend Set** | `oci_load_balancer_backend_set.app` | Cloud Billionaire Mode (`budget >= 500`) |
+| **OCI LB Listener** | `oci_load_balancer_listener.http` | Cloud Billionaire Mode (`budget >= 500`) |
 
 ---
 
@@ -81,11 +116,24 @@ Two derived booleans drive infrastructure layout:
 
 ![Architecture Modes](docs/images/architecture-modes.svg)
 
-**Normal / Broke / Chaotic** — All three share the same infrastructure: 1 instance in the public subnet with a public IP, HTTP/80 open to the internet, SSH restricted to `allowed_ssh_cidr`. Personality differences are cosmetic — only the served HTML changes.
+### 1. Standard Public Mode (Normal / Broke / Chaotic)
+* **Compute**: 1 × OCI Compute instance in Public Subnet (`10.0.1.0/24`)
+* **Networking**: Direct Public IP assigned
+* **Security**: NSG `main` permits HTTP (port 80) from `0.0.0.0/0` and SSH (port 22) from `allowed_ssh_cidr`
+* **Entry Point**: Direct access via Public IP (`http://<PUBLIC_IP>`)
 
-**Paranoid Engineer** — When `security_level >= 80` (and `budget >= 20`), networking flips to private. The instance gets no public IP, lives in `10.0.2.0/24`, and is only reachable through an OCI Bastion. NSG `private_app` permits SSH and HTTP only from the Bastion's private endpoint IP (`/32`). A NAT Gateway handles outbound traffic for bootstrap.
+### 2. Paranoid Mode (Paranoid Engineer)
+* **Compute**: 1 × OCI Compute instance in Private Subnet (`10.0.2.0/24`)
+* **Networking**: No Public IP assigned (`prohibit_public_ip_on_vnic = true`)
+* **Outbound Traffic**: Outbound internet traffic routed through OCI NAT Gateway for software updates
+* **Management & HTTP Access**: Managed via OCI Bastion standard service
+* **Security**: NSG `private_app` permits port 22 and port 80 strictly from the OCI Bastion private endpoint IP address (`/32`)
 
-**Cloud Billionaire** — When `budget >= 500` (and `security_level < 80`, `budget >= 20`): 2 instances in the public subnet, an OCI flexible Load Balancer in front with round-robin distribution. NSG `main` accepts HTTP only from NSG `public_entry`, so traffic must pass through the LB — direct instance access on port 80 is blocked.
+### 3. Cloud Billionaire Mode (Cloud Billionaire)
+* **Compute**: 2 × OCI Compute instances in Public Subnet (`10.0.1.0/24`)
+* **Load Balancer**: OCI Flexible Load Balancer (10–10 Mbps) with Round-Robin backend policy
+* **Health Checks**: HTTP GET check on `/` every 10 seconds (port 80)
+* **Security**: NSG `public_entry` handles public HTTP traffic on port 80. NSG `main` restricts port 80 ingress on backend instances to traffic originating from NSG `public_entry` only.
 
 ---
 
@@ -93,58 +141,25 @@ Two derived booleans drive infrastructure layout:
 
 ![Request Flow](docs/images/request-flow.svg)
 
----
-
-## Project Structure
-
-```
-terraform-lost-its-mind/
-├── .gitignore
-├── README.md
-├── scripts/
-│   └── bootstrap.sh              # cloud-init: installs nginx, writes HTML, firewalld
-├── website/
-│   └── index.html.tpl            # templatefile() personality-branded HTML
-├── docs/
-│   └── images/
-│       ├── architecture-overview.svg
-│       ├── personality-engine.svg
-│       ├── architecture-modes.svg
-│       ├── request-flow.svg
-│       └── how-it-works.svg
-└── terraform/
-    └── environment/
-        ├── provider.tf            # OCI provider, Terraform >= 1.5.0
-        ├── variables.tf           # All inputs with validation blocks
-        ├── locals.tf              # Personality engine, derived booleans
-        ├── data.tf                # Availability domains, Oracle Linux 9 image
-        ├── network.tf             # VCN, IGW, NAT GW, route tables, subnets
-        ├── security.tf            # NSGs, security rules, OCI Bastion
-        ├── compute.tf             # Compute instances (count-driven)
-        ├── load-balancer.tf       # LB, backend set, backends, listener
-        ├── cloud-init.tf          # templatefile() for script and HTML
-        ├── outputs.tf             # All Terraform outputs
-        └── .terraform.lock.hcl   # OCI provider 6.37.0
-```
+* **Standard Mode**: `Browser ──► Internet Gateway ──► Public Instance (port 80)`
+* **Billionaire Mode**: `Browser ──► OCI Load Balancer ──► Round-Robin Backend Set ──► Instances (port 80)`
+* **Paranoid Mode**: `User Terminal ──► OCI Bastion SSH Tunnel ──► Private Instance (port 80)`
 
 ---
 
 ## Prerequisites
 
-| Requirement | Detail |
-|-------------|--------|
-| Terraform | `>= 1.5.0` |
-| OCI Provider | `~> 6.0` (locked to `6.37.0`) |
-| OCI Account | Compartment with appropriate IAM policies |
-| OCI API Key | RSA key pair for API signing |
-| SSH key pair | Ed25519 or RSA public key |
-| `allowed_ssh_cidr` | Your IP in CIDR notation, e.g. `203.0.113.5/32` |
+* **Terraform**: `>= 1.5.0`
+* **OCI Provider**: `oracle/oci` (`~> 6.0`)
+* **Oracle Cloud Account**: Tenancy access with permissions to create VCN, Compute, Load Balancer, and Bastion resources
+* **OCI API Signing Key**: Pair of RSA keys (`.pem` format) added to your OCI User Profile
+* **SSH Key Pair**: Public key for instance initialization
 
 ---
 
 ## OCI Authentication
 
-Credentials are supplied via `terraform.tfvars` (excluded by `.gitignore`). The provider does **not** read from `~/.oci/config` — all values come from variables:
+The OCI Terraform provider in `provider.tf` authenticates directly using API signing keys declared via variables:
 
 ```hcl
 provider "oci" {
@@ -156,223 +171,213 @@ provider "oci" {
 }
 ```
 
-> **Never commit** `terraform.tfvars`, `*.pem`, `*.tfstate`, or `*.tfstate.*`. The `.gitignore` already excludes all of them.
+Credentials can also be referenced from a standard OCI configuration file (`~/.oci/config`):
+
+```ini
+[DEFAULT]
+user=ocid1.user.oc1..exampleuserocid
+fingerprint=20:3b:97:13:55:1c:5b:0d:d3:37:d8:50:4e:c5:3a:26
+tenancy=ocid1.tenancy.oc1..exampletenancyocid
+region=eu-amsterdam-1
+key_file=/home/user/.oci/oci_api_key.pem
+```
+
+> ⚠️ **Security Warning**: Never commit `terraform.tfvars`, `.pem` key files, or `terraform.tfstate` files to version control. They are excluded by `.gitignore`.
 
 ---
 
 ## Input Variables
 
-### Authentication — required, sensitive
+### Authentication & Compartment (Required)
 
-| Variable | Description |
-|----------|-------------|
-| `user_ocid` | OCID of the OCI user |
-| `tenancy_ocid` | OCID of the OCI tenancy |
-| `fingerprint` | API signing key fingerprint |
-| `private_key_path` | Absolute path to the `.pem` private key |
+| Variable | Type | Sensitive | Description |
+|---|:---:|:---:|---|
+| `user_ocid` | `string` | Yes | OCID of the OCI API user |
+| `tenancy_ocid` | `string` | Yes | OCID of the OCI tenancy |
+| `fingerprint` | `string` | Yes | Fingerprint of the OCI API signing key |
+| `private_key_path` | `string` | Yes | Absolute local path to private `.pem` key |
+| `compartment_id` | `string` | No | OCID of target OCI compartment |
 
-### Infrastructure — required
+### Personality Controls (Required)
 
-| Variable | Validation | Description |
-|----------|-----------|-------------|
-| `compartment_id` | — | OCID of the target compartment |
-| `allowed_ssh_cidr` | — | CIDR for SSH access |
-| `ssh_public_key` | — | Public key written to instance metadata |
-| `budget` | `>= 0` | Drives personality selection |
-| `security_level` | `0–100` | Drives `is_paranoid` |
-| `chaos_level` | `0–100` | Drives CHAOTIC personality |
-| `environment` | `dev`, `test`, `staging` | Used in resource tags |
+| Variable | Type | Validation Constraint | Description |
+|---|:---:|---|---|
+| `budget` | `number` | `>= 0` | Budget parameter influencing personality selection |
+| `security_level` | `number` | `0` to `100` | Security level triggering Paranoid Mode (`>= 80`) |
+| `chaos_level` | `number` | `0` to `100` | Chaos level triggering Chaotic Mode (`>= 80`) |
+| `environment` | `string` | `dev`, `test`, `staging` | Environment name used in resource tags |
 
-### Optional — with defaults
+### Networking & Compute (Required / Optional)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `region` | `eu-amsterdam-1` | OCI region |
-| `instance_shape` | `VM.Standard.E4.Flex` | Compute shape |
-| `project_name` | `terraform-lost-its-mind` | Resource names and tags |
-| `owner` | `abdulrehman-yahya` | Freeform tag |
-| `managed_by` | `Terraform` | Freeform tag |
-| `cloud_provider` | `OCI` | Freeform tag |
+| Variable | Type | Default | Description |
+|---|:---:|---|---|
+| `allowed_ssh_cidr` | `string` | *(Required)* | Trusted CIDR block permitted for SSH access |
+| `ssh_public_key` | `string` | *(Required)* | SSH public key string inserted into instance `user_data` |
+| `region` | `string` | `"eu-amsterdam-1"` | Target OCI region |
+| `instance_shape` | `string` | `"VM.Standard.E4.Flex"` | OCI Compute Flex shape |
+| `project_name` | `string` | `"terraform-lost-its-mind"` | Project tag prefix for display names |
+| `owner` | `string` | `"abdulrehman-yahya"` | Resource owner tag |
+| `managed_by` | `string` | `"Terraform"` | Infrastructure management tool tag |
+| `cloud_provider` | `string` | `"OCI"` | Cloud provider tag |
 
 ---
 
-## Deployment
+## Deployment Workflow
 
-**1. Create `terraform/environment/terraform.tfvars`:**
+### 1. Configure Local Environment
+Create `terraform/environment/terraform.tfvars`:
 
 ```hcl
-user_ocid        = "ocid1.user.oc1..aaaa..."
+user_ocid        = "ocid1.user.oc1..example"
+tenancy_ocid     = "ocid1.tenancy.oc1..example"
 fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
-tenancy_ocid     = "ocid1.tenancy.oc1..aaaa..."
-private_key_path = "/home/youruser/.oci/oci_api_key.pem"
+private_key_path = "/home/user/.oci/oci_api_key.pem"
+compartment_id   = "ocid1.compartment.oc1..example"
 
-compartment_id   = "ocid1.compartment.oc1..aaaa..."
 allowed_ssh_cidr = "203.0.113.5/32"
-ssh_public_key   = "ssh-ed25519 AAAA... you@host"
+ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5..."
 
 budget         = 100
 security_level = 50
-chaos_level    = 30
+chaos_level    = 20
 environment    = "dev"
 ```
 
-**2. Initialize, plan, apply:**
-
+### 2. Initialize and Validate
 ```bash
 cd terraform/environment
 terraform init
 terraform validate
-terraform plan -out=tfplan
-terraform apply tfplan
 ```
 
-> Use `-out=tfplan` so that `apply` uses the exact same inputs as `plan`. Without it, Terraform will re-prompt for personality variables, potentially resolving a different personality.
+### 3. Generate Execution Plan
+Always save the plan output to lock interactive variable inputs across plan and apply phases:
+
+```bash
+terraform plan -out=tfplan
+```
+
+### 4. Apply Infrastructure
+```bash
+terraform apply tfplan
+```
 
 ---
 
 ## Example Personality Runs
 
-| Budget | Security | Chaos | Personality | Infrastructure |
-|--------|----------|-------|-------------|----------------|
-| `10` | `99` | `99` | **BROKE STUDENT** | 1 instance, public. Budget wins. |
-| `50` | `90` | `50` | **PARANOID ENGINEER** | 1 instance, private. Bastion + NAT. |
-| `600` | `50` | `90` | **CLOUD BILLIONAIRE** | 2 instances, public. Load Balancer. |
-| `50` | `50` | `90` | **CHAOTIC** | 1 instance, public. No LB, no Bastion. |
-| `100` | `40` | `20` | **NORMAL ENGINEER** | 1 instance, public. Default fallthrough. |
-| `50` | `80` | `90` | **PARANOID ENGINEER** | `security_level = 80` meets threshold exactly. |
-| `500` | `79` | `30` | **CLOUD BILLIONAIRE** | `budget = 500` meets threshold exactly. |
-| `19` | `90` | `90` | **BROKE STUDENT** | `budget < 20` wins despite everything else. |
+| Inputs (`budget`, `security_level`, `chaos_level`) | Active Personality | Infrastructure Provisioned |
+|---|---|---|
+| `budget = 10`, `security_level = 90`, `chaos_level = 90` | **BROKE STUDENT** | 1 × Public Compute Instance (Budget condition takes precedence). |
+| `budget = 100`, `security_level = 85`, `chaos_level = 10` | **PARANOID ENGINEER** | 1 × Private Instance, OCI Bastion, OCI NAT Gateway, Private Subnet. |
+| `budget = 600`, `security_level = 20`, `chaos_level = 10` | **CLOUD BILLIONAIRE** | 2 × Public Instances, OCI Flexible Load Balancer, Round-Robin Backend Set. |
+| `budget = 100`, `security_level = 30`, `chaos_level = 90` | **CHAOTIC** | 1 × Public Compute Instance. |
+| `budget = 100`, `security_level = 30`, `chaos_level = 20` | **NORMAL ENGINEER** | 1 × Public Compute Instance (Default fallback). |
 
 ---
 
-## Outputs
+## Terraform Outputs
 
-| Output | Null when |
-|--------|-----------|
-| `personality` | — |
-| `personality_message` | — |
-| `architecture_mode` | — |
-| `instance_count` | — |
-| `instance_ids` | — |
-| `private_ips` | — |
-| `public_ips` | Paranoid (`[]`) |
-| `load_balancer_ip` | Not billionaire |
-| `application_url` / `website_url` | Paranoid (`null`) |
-| `website_urls` | Paranoid (`[]`) |
-| `vcn_id` / `public_subnet_id` / `internet_gateway_id` | — |
-| `private_subnet_id` / `network_security_group_id` | Not paranoid |
+| Output Name | Description | Active In Modes |
+|---|---|---|
+| `personality` | Name of the evaluated personality | All Modes |
+| `personality_message` | Quoted string from personality engine | All Modes |
+| `architecture_mode` | Mode description (`STANDARD PUBLIC` or `PARANOID PRIVATE`) | All Modes |
+| `instance_count` | Number of instances provisioned (1 or 2) | All Modes |
+| `public_ips` | List of public IP addresses assigned | Standard & Billionaire (`[]` in Paranoid) |
+| `private_ips` | List of private IP addresses assigned | All Modes |
+| `load_balancer_ip` | Public IP address of OCI Load Balancer | Billionaire Mode (`null` otherwise) |
+| `application_url` | Primary URL for accessing the application | Standard & Billionaire (`null` in Paranoid) |
+| `website_url` | Primary website URL | Standard & Billionaire (`null` in Paranoid) |
+| `website_urls` | List of all accessible public website URLs | Standard & Billionaire (`[]` in Paranoid) |
+| `vcn_id` | OCID of the created VCN | All Modes |
+| `public_subnet_id` | OCID of the public subnet | All Modes |
+| `private_subnet_id` | OCID of the private subnet | Paranoid Mode (`null` otherwise) |
 
 ---
 
 ## Accessing the Application
 
-**Normal / Broke / Chaotic:**
+### Standard & Billionaire Modes
+Access the application directly in your web browser using the output URL:
+
 ```bash
-terraform output website_url   # → http://<PUBLIC_IP>
+# Standard Mode (Direct Instance IP)
+http://<PUBLIC_IP>
+
+# Billionaire Mode (Load Balancer IP)
+http://<LOAD_BALANCER_IP>
 ```
 
-**Cloud Billionaire:**
-```bash
-terraform output load_balancer_ip   # → http://<LOAD_BALANCER_IP>
-```
-Allow 2–3 minutes after apply for health checks to mark backends healthy.
+### Paranoid Mode (OCI Bastion Port Forwarding)
 
-**Paranoid Engineer** — `website_url` is `null`. Access via OCI Bastion port-forward:
+In Paranoid Mode, instances have no Public IP address. Access requires creating an **OCI Bastion SSH Port Forwarding Session**.
 
-1. Create a Managed SSH session in OCI Console targeting the private instance IP on port 22.
-2. Open the tunnel:
+1. Create a Managed SSH Port Forwarding Session via OCI Console or OCI CLI targeting port 80 of the instance's private IP (`private_ips[0]`).
+2. Run the SSH port forwarding command provided by OCI:
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 \
   -N \
   -L 8080:<PRIVATE_IP>:80 \
   -p 22 \
-  <SESSION_OCID>@host.bastion.<REGION>.oci.oraclecloud.com
+  <BASTION_SESSION_OCID>@host.bastion.<REGION>.oci.oraclecloud.com
 ```
 
-3. Open `http://localhost:8080` in your browser.
+3. Open your local browser to access the website:
+```text
+http://localhost:8080
+```
 
 ---
 
 ## Security Model
 
-All traffic rules live in NSGs only. The Security List attached to both subnets is intentionally empty (see comment in `network.tf`).
-
-| Mode | SSH | HTTP | Instance IP |
-|------|-----|------|-------------|
-| Normal / Broke / Chaotic | From `allowed_ssh_cidr` | From `0.0.0.0/0` | Public |
-| Paranoid | From Bastion endpoint `/32` | From Bastion endpoint `/32` | **None** |
-| Billionaire | From `allowed_ssh_cidr` | From NSG `public_entry` only | Public |
-
-In Billionaire mode, instances block direct HTTP from `0.0.0.0/0` — traffic must enter through the Load Balancer.
-
----
-
-## Terraform Concepts Demonstrated
-
-| Concept | File |
-|---------|------|
-| `validation` blocks on variables | `variables.tf` |
-| Chained ternary conditionals | `locals.tf` |
-| `count` for conditional resources | `network.tf`, `security.tf`, `load-balancer.tf` |
-| `for_each` over dynamic instance map | `load-balancer.tf` |
-| Splat expressions `[*]` | `outputs.tf` |
-| `for` expressions in outputs | `outputs.tf` |
-| `templatefile()` | `cloud-init.tf` |
-| `base64encode()` for user_data | `compute.tf` |
-| Data sources (ADs, OS image) | `data.tf` |
-| NSG-to-NSG source rules | `security.tf` |
-| `min()` to cap instance count | `locals.tf` |
-| Flex shape `shape_config` | `compute.tf` |
-| Conditional subnet + IP assignment | `compute.tf` |
+* **NSG Centralization**: Subnet Security Lists are left empty (`nsg_only`). Network traffic is strictly enforced by OCI Network Security Groups attached directly to VNICs.
+* **SSH CIDR Isolation**: In Standard Mode, SSH ingress on port 22 is restricted to `var.allowed_ssh_cidr`.
+* **Private Network Enclosure**: In Paranoid Mode, instances receive no Public IP. Ingress traffic on port 22 and port 80 is restricted strictly to the OCI Bastion private endpoint IP (`/32`).
+* **Load Balancer Isolation**: In Billionaire Mode, backend compute instances reject direct HTTP requests from the internet and accept port 80 ingress exclusively from the Load Balancer NSG (`public_entry`).
 
 ---
 
 ## Troubleshooting
 
-**`502 Bad Gateway` from the Load Balancer**
-- Wait 2–3 minutes — health checks take time to pass after apply
-- Check `systemctl status nginx` on both instances
-- Check `/var/log/terraform-bootstrap.log` for bootstrap errors
+### 1. `502 Bad Gateway` on Load Balancer (Billionaire Mode)
+* **Cause**: Backend health checks require 1–2 minutes after `apply` while nginx initializes via `cloud-init`.
+* **Resolution**: Monitor health status in OCI Console under Load Balancer Backend Sets. Verify nginx status on instances.
 
-**Bastion tunnel connects but browser returns nothing**
-- Confirm the correct `<PRIVATE_IP>` from `terraform output private_ips`
-- Confirm local port `8080` is not already in use
-- Confirm the Bastion session has not expired
+### 2. Bastion Session Connection Timeout (Paranoid Mode)
+* **Cause**: Ingress rules on NSG `private_app` must match the Bastion private endpoint IP.
+* **Resolution**: Verify that the OCI Bastion state is `ACTIVE` and that client CIDR in `allowed_ssh_cidr` permits your current local public IP.
 
-**SSH to instance hangs**
-- Paranoid mode: instance has no public IP — SSH directly will never work, use the Bastion
-- Normal mode: confirm your current IP matches `allowed_ssh_cidr`
-
-**`terraform apply` re-prompts for variables**
-- You ran `plan` without `-out=tfplan` — always save the plan: `terraform plan -out=tfplan`
-
-**`401-NotAuthenticated` from OCI API**
-- Verify `private_key_path`, `fingerprint`, `user_ocid`, and `tenancy_ocid` in `terraform.tfvars`
+### 3. API Authentication Errors (`401 Unauthenticated`)
+* **Cause**: Mismatch between `fingerprint`, `private_key_path`, or `user_ocid`.
+* **Resolution**: Verify fingerprint using `openssl rsa -pubout -outform DER -in ~/.oci/oci_api_key.pem | openssl md5 -c`.
 
 ---
 
-## Destroy
+## Infrastructure Cleanup
+
+To destroy all provisioned OCI resources:
 
 ```bash
 cd terraform/environment
 terraform destroy
 ```
 
-Terraform will re-prompt for all personality variables. Supply the same values used during apply, or the destroy plan may differ from the applied state.
-
-> This permanently deletes all OCI resources: VCN, instances, Load Balancer, NAT Gateway, Bastion, NSGs, subnets.
+> ⚠️ **Caution**: `terraform destroy` will terminate all Compute instances, VCN subnets, Gateways, Load Balancers, and Bastion sessions associated with the state file.
 
 ---
 
 ## Cost Awareness
 
-| Resource | Created when | Billing |
-|----------|-------------|---------|
-| Compute instance(s) | Always | Per OCPU-hour (E4.Flex) |
-| Boot volumes | Always | Per GB-month |
-| Load Balancer | Billionaire only | Hourly + bandwidth |
-| NAT Gateway | Paranoid only | Per GB processed |
-| OCI Bastion | Paranoid only | Per session-minute |
+This repository provisions standard OCI resources. Depending on the active personality mode, costs may apply:
 
-`VM.Standard.E4.Flex` is not part of the OCI Always Free tier. Run `terraform plan` and review before applying.
+| Component | Cost Impact |
+|---|---|
+| **OCI Compute (`VM.Standard.E4.Flex`)** | Billed per OCPU/GB memory hour (2 OCPU / 16 GB per VM). |
+| **OCI Load Balancer** | Flexible Load Balancer hourly charge + data transfer. |
+| **OCI NAT Gateway** | Hourly charge for gateway usage in Paranoid Mode. |
+| **OCI Bastion** | Free service tier (subject to regional session limits). |
+
+Always run `terraform destroy` when testing is complete.
